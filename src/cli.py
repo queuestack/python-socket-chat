@@ -9,12 +9,12 @@ class TextColors:
   BLUE = '\33[34m'
 
 class Constants:
-  SHOW_YOU = TextColors.YELLOW + TextColors.BOLD + " You: " + TextColors.ENDC
+  SHOW_ME = TextColors.YELLOW + TextColors.BOLD + " Me: " + TextColors.ENDC
   ASK_NAME = TextColors.BLUE + TextColors.BOLD + "Enter username: " + TextColors.ENDC
   TIMEOUT_TIME = 2
   CONNECT_ERROR = TextColors.RED + TextColors.BOLD + "Fail to connect to the server" + TextColors.ENDC
-  RECV_BUFSIZE = 1024
-  DISCONNECTION = TextColors.RED + TextColors.BOLD + "\r Connection is closed \n" + TextColors.ENDC
+  RECV_BUFSIZE = 2 ** 12
+  DISCONNECTION = TextColors.RED + TextColors.BOLD + "\r You exit the chat \n" + TextColors.ENDC
 
 
 # Connect to server
@@ -25,23 +25,23 @@ def connect(sock, host, port):
     print(Constants.CONNECT_ERROR)
     sys.exit()
 
-def recvMsg(sock, connSock):
+def recv_msg(sock, connSock):
   data = sock.recv(Constants.RECV_BUFSIZE)
   if not data:
     print(Constants.DISCONNECTION)
     sys.exit()
   else:
     sys.stdout.write(data.decode('utf-8'))
-    display()
+    write_me()
 
-def sendMsg(connSock):
+def send_msg(connSock):
   message = sys.stdin.readline()
   connSock.send(message.encode('utf-8'))
-  display() 
+  write_me() 
 
-# Display user name on console
-def display():
-  sys.stdout.write(Constants.SHOW_YOU)
+# write_me user name on console
+def write_me():
+  sys.stdout.write(Constants.SHOW_ME)
   sys.stdout.flush()
 
 def main():
@@ -71,7 +71,7 @@ def main():
     for sock in readableList:
       # Receive message from server if readable socket is connected socket
       # Send message to server if readable socket is stdin
-      recvMsg(sock, connSock) if sock == connSock else sendMsg(connSock)
+      recv_msg(sock, connSock) if sock == connSock else send_msg(connSock)
 
 if __name__ == "__main__":
   main()

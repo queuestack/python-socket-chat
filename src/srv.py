@@ -1,7 +1,7 @@
 import socket, select, sys
 
-# ANSI escape sequences for colored text
 class TextColors:
+    # ANSI escape sequences for colored text
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     RED = '\33[31m'
@@ -9,16 +9,13 @@ class TextColors:
     YELLOW = '\33[33m'
     BLUE = '\33[34m'
     PURPLE = '\33[35m'
-
 class Constants:
-    RECV_BUFF = 1024
+    RECV_BUFF = 2 ** 12
     LISTEN_BACKLOG = 10
-    SERVER_WORKING = TextColors.GREEN + "SERVER WORKING" + TextColors.ENDC
-    NAME_EXIST = "\r" + TextColors.RED + TextColors.BOLD + "Username already taken!\n" + TextColors.ENDC
-    WELCOME_MSG = TextColors.GREEN + TextColors.BOLD + "Welcome to chat room. Enter 'tata' anytime to exit\n" + TextColors.ENDC
-
-# Send message to all connected clients
-def send_to_all (sendSock, servSock, message, connList):
+    SERVER_WORKING = TextColors.GREEN + "Server is now  working" + TextColors.ENDC
+    NAME_EXIST = "\r" + TextColors.RED + TextColors.BOLD + "Username already exists!\n" + TextColors.ENDC
+    WELCOME_MSG = TextColors.GREEN + TextColors.BOLD + "Welcome to this chat application. You can exit with Enter('\\n')\n" + TextColors.ENDC
+def send_all (sendSock, servSock, message, connList):
     # Do not forward the message to server and sender
     for sock in connList:
         if sock != sendSock and sock != servSock:
@@ -27,7 +24,63 @@ def send_to_all (sendSock, servSock, message, connList):
             except:
                 sock.close()
                 connList.remove(sock)
+def connect_client(sock, servSock, names, connList):
+    newConnSock, addr = servSock.accept()
+    name = newConnSock.recv(Constants.RECV_BUFF)
+    connList.append(newConnSock)
+    names[addr] = ""
 
+    # Check name duplication
+    if name in names.values():
+        newConnSock.send(Constants.NAME_EXIST.encode('utf-8'))
+        del names[addr]
+        connList.remove(newConnSock)
+        newConnSock.close()
+        return
+
+    else:
+        names[addr] = name
+        print("(IP: %s, port: %s) connected" % addr," [name: ",names[addr].decode('utf-8'),"]")
+        newConnSock.send(Constants.WELCOME_MSG.encode('utf-8'))
+        join_msg = TextColors.GREEN + TextColors.ENDC + "\r "+ name.decode('utf-8') +" joined to chat" + TextColors.ENDC + "\n"
+        send_all(newConnSock, servSock, join_msg.encode('utf-8'), connList)
+        return
+def recv_and_send_msg(sock, servSock, names, connList):
+    # Data from client
+    try:
+        data = sock.recv(Constants.RECV_BUFF).decode('utf-8')
+
+        # Get address of client sending the message
+        ip, port = sock.getpeername()
+        name = names[(ip, port)].decode('utf-8')
+
+        if data == "\n":
+            msg = "\r" + TextColors.RED + TextColors.BOLD + name + " left the conversation " + TextColors.ENDC + "\n"
+            send_all(sock, servSock, msg.encode('utf-8'), connList)
+            print("Client (%s, %s) is offline" % (ip, port)," [", name, "]")
+            del names[(ip, port)]
+            connList.remove(sock)
+            sock.close()
+            return
+        
+        else:
+            data = data.rstrip()
+            msg = "\r" + TextColors.PURPLE + TextColors.BOLD + name + ": " + TextColors.ENDC + data + "\n"
+            send_all(sock, servSock, msg.encode('utf-8'), connList)
+            return
+
+    # Abrupt user exit
+    except:
+        ip, port = sock.getpeername()
+        name = names[(ip, port)].decode('utf-8')
+        msg = "\r" + TextColors.RED + TextColors.BOLD + name +" left the conversation unexpectedly" + TextColors.ENDC + "\n"
+        send_all(sock, servSock, msg.encode('utf-8'), connList)
+        print("Client (%s, %s) is offline (error)" % (ip, port)," [", name,"]\n")
+        del names[(ip, port)]
+        connList.remove(sock)
+        sock.close()
+        return
+    
 def main():
     # Get host and port number from arguments
     if len(sys.argv) < 3:
@@ -39,7 +92,7 @@ def main():
 
     # Dictionary to store address corresponding to name
     name = ""
-    record = {}
+    names = {}
 
     # List of socket descriptors
     connList = []
@@ -54,68 +107,22 @@ def main():
     print(Constants.SERVER_WORKING)
 
     while True:
-        # Get the lists of sockets with sockets in connected list
-        readableList, writableList, errorList = select.select(connList, [], [])
+        try:
+            # Get the lists of sockets with sockets in connected list
+            readableList, writableList, errorList = select.select(connList, [], [])
 
-        for sock in readableList:
-            # New connection
-            if sock == servSock:
-                newConnSock, addr = servSock.accept()
-                name = newConnSock.recv(Constants.RECV_BUFF)
-                connList.append(newConnSock)
-                record[addr] = ""
+            for sock in readableList:
+                # Connect to new client if socket is server socket
+                # Receive message from a client and sent the message to other clients
+                connect_client(sock, servSock, names, connList) if sock == servSock else recv_and_send_msg(sock, servSock, names, connList)
 
-                # Check name duplication
-                if name in record.values():
-                    newConnSock.send(Constants.NAME_EXIST.encode('utf-8'))
-                    del record[addr]
-                    connList.remove(newConnSock)
-                    newConnSock.close()
-                    continue
-                else:
-                    record[addr] = name
-                    print("Client (%s, %s) connected" % addr," [",record[addr].decode('utf-8'),"]")
-                    newConnSock.send(Constants.WELCOME_MSG.encode('utf-8'))
-                    join_msg = TextColors.GREEN + TextColors.ENDC + "\r "+ name.decode('utf-8') +" joined the conversation" + TextColors.ENDC + "\n"
-                    send_to_all(newConnSock, servSock, join_msg.encode('utf-8'), connList)
-
-            # Get message from a client
-            else:
-                # Data from client
-                try:
-                    data = sock.recv(Constants.RECV_BUFF).decode('utf-8')
-
-                    # Get address of client sending the message
-                    ip, port = sock.getpeername()
-                    name = record[(ip, port)].decode('utf-8')
-
-                    if data == "\n":
-                        msg = "\r" + TextColors.RED + TextColors.BOLD + name + " left the conversation " + TextColors.ENDC + "\n"
-                        send_to_all(sock, servSock, msg.encode('utf-8'), connList)
-                        print("Client (%s, %s) is offline" % (ip, port)," [", name, "]")
-                        del record[(ip, port)]
-                        connList.remove(sock)
-                        sock.close()
-                        continue
-                    
-                    else:
-                        data = data.rstrip()
-                        msg = "\r" + TextColors.PURPLE + TextColors.BOLD + name + ": " + TextColors.ENDC + data + "\n"
-                        send_to_all(sock, servSock, msg.encode('utf-8'), connList)
-
-                # Abrupt user exit
-                except:
-                    ip, port = sock.getpeername()
-                    name = record[(ip, port)].decode('utf-8')
-                    msg = "\r" + TextColors.RED + TextColors.BOLD + name +" left the conversation unexpectedly" + TextColors.ENDC + "\n"
-                    send_to_all(sock, servSock, msg.encode('utf-8'), connList)
-                    print("Client (%s, %s) is offline (error)" % (ip, port)," [", name,"]\n")
-                    del record[(ip, port)]
-                    connList.remove(sock)
-                    sock.close()
-                    continue
-    
+        except KeyboardInterrupt:
+            for sock in connList:
+                sock.close()
+                
+            sys.exit()
+            
     servSock.close()
-    
+
 if __name__ == '__main__':
     main()

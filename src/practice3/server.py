@@ -90,7 +90,7 @@ if __name__ == "__main__":
 						continue
 
 					else:
-						msg = bcolors.PURPLE + bcolors.BOLD + record[(i,p)]+": " + bcolors.ENDC +data+"\n"
+						msg = "\r " + bcolors.PURPLE + bcolors.BOLD + record[(i,p)]+": " + bcolors.ENDC +data+"\n"
 						send_to_all(sock,msg)
             
                 #abrupt user exit
