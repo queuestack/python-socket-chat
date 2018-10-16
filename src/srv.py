@@ -18,10 +18,10 @@ class Texts:
     CONN_MSG = TextColors.BLUE + TextColors.BOLD + "\rConnected to the chat server (%s %s online)\n" + TextColors.ENDC
     JOIN_MSG = TextColors.BLUE + TextColors.BOLD + "\r> New user %s:%s entered (%s %s online)\n" + TextColors.ENDC
     EXIT_MSG = TextColors.RED + TextColors.BOLD + "\r< The user %s:%s left (%s %s online)\n" + TextColors.ENDC
-    DISCON_MSG = TextColors.RED + TextColors.BOLD + "\r You have been disconnected \n" + TextColors.ENDC
-    SEND_MSG = TextColors.PURPLE + TextColors.BOLD + "\r[IP: %s, port: %s]: %s\n" + TextColors.ENDC
+    SEND_MSG = TextColors.PURPLE + TextColors.BOLD + "\r[%s:%s]: %s\n" + TextColors.ENDC
     USER = "user"
     USERS = "users"
+    KEY_INTER = "\rKeyboardInterrupt\n"
 
 class Constants:
     RECV_BUFF = 2 ** 12
@@ -136,10 +136,12 @@ def main():
                 connect_client(sock, servSock, connList) if sock == servSock else recv_and_send_msg(sock, servSock, connList)
 
         except KeyboardInterrupt:
+            # Close socket server before exiting the process
             for sock in connList:
                 if sock:
                     sock.close()
-                
+            
+            print(Texts.KEY_INTER)
             sys.exit()
     
     if servSock:   

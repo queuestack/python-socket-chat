@@ -12,6 +12,7 @@ class Texts:
   SHOW_YOU = TextColors.YELLOW + TextColors.BOLD + "[You]: " + TextColors.ENDC
   CONNECT_ERROR = TextColors.RED + TextColors.BOLD + "\r You can not connect to the server, check IP and host \n" + TextColors.ENDC
   DISCON_MSG = TextColors.RED + TextColors.BOLD + "\r< You have been disconnected \n" + TextColors.ENDC
+  KEY_INTER = "\rKeyboardInterrupt\n"
 
 class Constants:
   TIMEOUT_TIME = 2
@@ -73,8 +74,9 @@ def main():
     
     except KeyboardInterrupt:
       connSock.send(b"\n")
-      print(Texts.DISCON_MSG)
       connSock.close()
+
+      print(Texts.KEY_INTER)
       sys.exit()
 
 if __name__ == "__main__":
