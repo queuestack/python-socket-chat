@@ -1,47 +1,48 @@
 import socket, sys, select, string
 
-# ANSI escape sequences for colored text
 class TextColors:
+  # ANSI escape sequences for colored text
   ENDC = '\033[0m'
   BOLD = '\033[1m'
   RED = '\33[31m'
   YELLOW = '\33[33m'
   BLUE = '\33[34m'
 
+class Texts:
+  SHOW_YOU = TextColors.YELLOW + TextColors.BOLD + "[You]: " + TextColors.ENDC
+  CONNECT_ERROR = TextColors.RED + TextColors.BOLD + "\r You can not connect to the server, check IP and host \n" + TextColors.ENDC
+  DISCON_MSG = TextColors.RED + TextColors.BOLD + "\r< You have been disconnected \n" + TextColors.ENDC
+
 class Constants:
-  SHOW_ME = TextColors.YELLOW + TextColors.BOLD + " Me: " + TextColors.ENDC
-  ASK_NAME = TextColors.BLUE + TextColors.BOLD + "Enter username: " + TextColors.ENDC
   TIMEOUT_TIME = 2
-  CONNECT_ERROR = TextColors.RED + TextColors.BOLD + "Fail to connect to the server" + TextColors.ENDC
   RECV_BUFSIZE = 2 ** 12
-  DISCONNECTION = TextColors.RED + TextColors.BOLD + "\r You exit the chat \n" + TextColors.ENDC
 
 
-# Connect to server
 def connect(sock, host, port):
+  # Connect to server
   try:
     sock.connect((host, port))
   except:
-    print(Constants.CONNECT_ERROR)
+    print(Texts.CONNECT_ERROR)
     sys.exit()
 
 def recv_msg(sock, connSock):
   data = sock.recv(Constants.RECV_BUFSIZE)
   if not data:
-    print(Constants.DISCONNECTION)
+    print(Texts.DISCON_MSG)
     sys.exit()
   else:
     sys.stdout.write(data.decode('utf-8'))
-    write_me()
+    display_you()
 
 def send_msg(connSock):
   message = sys.stdin.readline()
   connSock.send(message.encode('utf-8'))
-  write_me() 
+  display_you() 
 
-# write_me user name on console
-def write_me():
-  sys.stdout.write(Constants.SHOW_ME)
+def display_you():
+  # write 'YOU' on console
+  sys.stdout.write(Texts.SHOW_YOU)
   sys.stdout.flush()
 
 def main():
@@ -53,16 +54,12 @@ def main():
     host = sys.argv[1]
     port = int(sys.argv[2])
 
-  # Asks for user nickname
-  name = input(Constants.ASK_NAME)
+  # Create TCP socket and set timeout
   connSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   connSock.settimeout(Constants.TIMEOUT_TIME)
 
   # Connect to server with host and port number
   connect(connSock, host, port)
-
-  # Send connection message to server
-  connSock.send(name.encode('utf-8'))
 
   while True:
     # Get the lists of sockets with sys.stdin and connected socket as an inputs
@@ -75,6 +72,8 @@ def main():
         recv_msg(sock, connSock) if sock == connSock else send_msg(connSock)
     
     except KeyboardInterrupt:
+      connSock.send(b"\n")
+      print(Texts.DISCON_MSG)
       connSock.close()
       sys.exit()
 
