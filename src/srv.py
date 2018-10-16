@@ -22,7 +22,8 @@ def send_all (sendSock, servSock, message, connList):
             try:
                 sock.send(message)
             except:
-                sock.close()
+                if sock:
+                    sock.close()
                 connList.remove(sock)
 def connect_client(sock, servSock, names, connList):
     newConnSock, addr = servSock.accept()
@@ -35,7 +36,8 @@ def connect_client(sock, servSock, names, connList):
         newConnSock.send(Constants.NAME_EXIST.encode('utf-8'))
         del names[addr]
         connList.remove(newConnSock)
-        newConnSock.close()
+        if newConnSock:
+            newConnSock.close()
         return
 
     else:
@@ -60,7 +62,8 @@ def recv_and_send_msg(sock, servSock, names, connList):
             print("Client (%s, %s) is offline" % (ip, port)," [", name, "]")
             del names[(ip, port)]
             connList.remove(sock)
-            sock.close()
+            if sock:
+                sock.close()
             return
         
         else:
@@ -75,10 +78,11 @@ def recv_and_send_msg(sock, servSock, names, connList):
         name = names[(ip, port)].decode('utf-8')
         msg = "\r" + TextColors.RED + TextColors.BOLD + name +" left the conversation unexpectedly" + TextColors.ENDC + "\n"
         send_all(sock, servSock, msg.encode('utf-8'), connList)
-        print("Client (%s, %s) is offline (error)" % (ip, port)," [", name,"]\n")
+        print("Client (%s, %s) is offline (error)" % (ip, port)," [name: ", name,"]\n")
         del names[(ip, port)]
         connList.remove(sock)
-        sock.close()
+        if sock:            
+            sock.close()
         return
     
 def main():
@@ -118,11 +122,13 @@ def main():
 
         except KeyboardInterrupt:
             for sock in connList:
-                sock.close()
+                if sock:
+                    sock.close()
                 
             sys.exit()
-            
-    servSock.close()
+    
+    if servSock:   
+        servSock.close()
 
 if __name__ == '__main__':
     main()

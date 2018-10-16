@@ -56,7 +56,7 @@ def main():
   # Asks for user nickname
   name = input(Constants.ASK_NAME)
   connSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  connSock.settimeout(2)
+  connSock.settimeout(Constants.TIMEOUT_TIME)
 
   # Connect to server with host and port number
   connect(connSock, host, port)
@@ -66,12 +66,17 @@ def main():
 
   while True:
     # Get the lists of sockets with sys.stdin and connected socket as an inputs
-    readableList, writableList, errorList = select.select([sys.stdin, connSock], [], [])
+    try:
+      readableList, writableList, errorList = select.select([sys.stdin, connSock], [], [])
+      
+      for sock in readableList:
+        # Receive message from server if readable socket is connected socket
+        # Send message to server if readable socket is stdin
+        recv_msg(sock, connSock) if sock == connSock else send_msg(connSock)
     
-    for sock in readableList:
-      # Receive message from server if readable socket is connected socket
-      # Send message to server if readable socket is stdin
-      recv_msg(sock, connSock) if sock == connSock else send_msg(connSock)
+    except KeyboardInterrupt:
+      connSock.close()
+      sys.exit()
 
 if __name__ == "__main__":
   main()
