@@ -1,4 +1,4 @@
-import socket, select, string, sys
+import socket, sys, select, string
 
 # ANSI escape sequences for colored text
 class TextColors:
@@ -25,12 +25,27 @@ def connect(sock, host, port):
     print(Constants.CONNECT_ERROR)
     sys.exit()
 
+def recvMsg(sock, connSock):
+  data = sock.recv(Constants.RECV_BUFSIZE)
+  if not data:
+    print(Constants.DISCONNECTION)
+    sys.exit()
+  else:
+    sys.stdout.write(data.decode('utf-8'))
+    display()
+
+def sendMsg(connSock):
+  message = sys.stdin.readline()
+  connSock.send(message.encode('utf-8'))
+  display() 
+
 # Display user name on console
 def display():
   sys.stdout.write(Constants.SHOW_YOU)
   sys.stdout.flush()
 
 def main():
+  # Get host and port number from arguments
   if len(sys.argv) < 3:
     print("usage: python3 ", sys.argv[0], "<host> <port>")
     sys.exit()
@@ -54,21 +69,9 @@ def main():
     readableList, writableList, errorList = select.select([sys.stdin, connSock], [], [])
     
     for sock in readableList:
-      # Receive message from server
-      if sock == connSock:
-        data = sock.recv(Constants.RECV_BUFSIZE)
-        if not data:
-          print(Constants.DISCONNECTION)
-          sys.exit()
-        else:
-          sys.stdout.write(data.decode('utf-8'))
-          display()
-      
-      # Send message to server
-      else:
-        message = sys.stdin.readline()
-        connSock.send(message.encode('utf-8'))
-        display()
+      # Receive message from server if readable socket is connected socket
+      # Send message to server if readable socket is stdin
+      recvMsg(sock, connSock) if sock == connSock else sendMsg(connSock)
 
 if __name__ == "__main__":
   main()
