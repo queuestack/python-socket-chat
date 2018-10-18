@@ -30,7 +30,7 @@ class Constants:
     NUM_LEAVING_CLIENT = 1
 
 def send_all (sendSock, servSock, message, connList):
-    # Do not forward the message to server and sender
+    # Send message to connected sockets except server and sender
     for sock in connList:
         if sock != sendSock and sock != servSock:
             try:
@@ -39,11 +39,14 @@ def send_all (sendSock, servSock, message, connList):
                 if sock:
                     sock.close()
                 connList.remove(sock)
+
 def connect_client(sock, servSock, connList):
+    # Connect to client
     newConnSock, addr = servSock.accept()
     ip, port = addr
     connList.append(newConnSock)
-
+    
+    # Send connection message to other clients
     conn_msg = make_conn_msg(connList) 
     join_msg = make_join_msg(ip, port, connList)
 
@@ -53,52 +56,64 @@ def connect_client(sock, servSock, connList):
     return
 
 def make_conn_msg(connList):
+    # Get current user numbers and make connection message
     nUser = len(connList) - Constants.NUM_SERVER
     user = Texts.USER if nUser == 1 else Texts.USERS
     return Texts.CONN_MSG % (nUser, user)
 
 def make_join_msg(ip, port, connList):
+    # Get current user numbers and make join message
     nUser = len(connList) - Constants.NUM_SERVER
     user = Texts.USER if nUser == 1 else Texts.USERS
     return Texts.JOIN_MSG % (ip, port, nUser, user)
 
 def make_leave_msg(ip, port, connList):
+    # Get current user numbers and make leave message
     nUser = len(connList) - Constants.NUM_SERVER - Constants.NUM_LEAVING_CLIENT
     user = Texts.USER if (nUser == 1 or nUser == 0) else Texts.USERS
     return Texts.EXIT_MSG % (ip, port, nUser, user)
 
 def recv_and_send_msg(sock, servSock, connList):
-    # Data from client
+    # Receive message from a client and send the message to the other clients
     try:
+        # Get data
         data = sock.recv(Constants.RECV_BUFF).decode('utf-8')
 
         # Get address of client sending the message
         ip, port = sock.getpeername()
-
+        
         if data == "\n":
+            # Client exits the chat room when the data is new line
+            # Send closing connection message to other clients and server
             msg = make_leave_msg(ip, port, connList)
             send_all(sock, servSock, msg.encode('utf-8'), connList)
-            connList.remove(sock)
             print(msg)
+
+            # Close connection
+            connList.remove(sock)            
             if sock:
                 sock.close()
             return
         
         else:
+            # Send message to the other clients and server
             data = data.rstrip()
             msg = Texts.SEND_MSG % (ip, port, data)
             send_all(sock, servSock, msg.encode('utf-8'), connList)
             print(msg)
             return
 
-    # Abrupt user exit
+
     except:
+        # Handle error
         ip, port = sock.getpeername()
 
+        # Send error message to other clients and server
         msg = make_leave_msg(ip, port, connList) + " (error) "
         send_all(sock, servSock, msg.encode('utf-8'), connList)
         print(msg)
 
+        # Close connection
         connList.remove(sock)
         if sock:            
             sock.close()
@@ -113,29 +128,33 @@ def main():
         host = sys.argv[1]
         port = int(sys.argv[2])
 
-    # List of socket descriptors
+    # List of socket
     connList = []
 
+    # Open server socket and bind it to input ip, port
     servSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    servSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     servSock.bind((host, port))
     servSock.listen(Constants.LISTEN_BACKLOG)
 
-    # Add server socket to the list of readable connections
+    # Add server socket to the list of socket
     connList.append(servSock)
 
+    # Print server start message
     print(Texts.START_SRV % port )
 
     while True:
         try:
-            # Get the lists of sockets with sockets in connected list
+            # Get the lists of sockets with sockets from connected sockets
             readableList, writableList, errorList = select.select(connList, [], [])
 
             for sock in readableList:
-                # Connect to new client if socket is server socket
-                # Receive message from a client and sent the message to other clients
+                # Connect to new client if readable socket is server socket
+                # Receive message from a client and send the message to other clients if readable socket is client socket
                 connect_client(sock, servSock, connList) if sock == servSock else recv_and_send_msg(sock, servSock, connList)
 
         except KeyboardInterrupt:
+            # Handle Ctrl + C
             # Close socket server before exiting the process
             for sock in connList:
                 if sock:
@@ -144,7 +163,7 @@ def main():
             print(Texts.KEY_INTER)
             sys.exit()
     
-    if servSock:   
+    if servSock:
         servSock.close()
 
 if __name__ == '__main__':

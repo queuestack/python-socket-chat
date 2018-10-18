@@ -18,7 +18,6 @@ class Constants:
   TIMEOUT_TIME = 2
   RECV_BUFSIZE = 2 ** 12
 
-
 def connect(sock, host, port):
   # Connect to server
   try:
@@ -27,7 +26,8 @@ def connect(sock, host, port):
     print(Texts.CONNECT_ERROR)
     sys.exit()
 
-def recv_msg(sock, connSock):
+def recv_msg(sock):
+  # Recieve message from server
   data = sock.recv(Constants.RECV_BUFSIZE)
   if not data:
     print(Texts.DISCON_MSG)
@@ -36,13 +36,14 @@ def recv_msg(sock, connSock):
     sys.stdout.write(data.decode('utf-8'))
     display_you()
 
-def send_msg(connSock):
+def send_msg(sock):
+  # Send message from client
   message = sys.stdin.readline()
-  connSock.send(message.encode('utf-8'))
+  sock.send(message.encode('utf-8'))
   display_you() 
 
 def display_you():
-  # write 'YOU' on console
+  # Display 'YOU' on console
   sys.stdout.write(Texts.SHOW_YOU)
   sys.stdout.flush()
 
@@ -70,9 +71,11 @@ def main():
       for sock in readableList:
         # Receive message from server if readable socket is connected socket
         # Send message to server if readable socket is stdin
-        recv_msg(sock, connSock) if sock == connSock else send_msg(connSock)
+        recv_msg(connSock) if sock == connSock else send_msg(connSock)
     
+
     except KeyboardInterrupt:
+      # Handle Ctrl + C
       connSock.send(b"\n")
       connSock.close()
 
