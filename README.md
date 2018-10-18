@@ -53,16 +53,16 @@ The function gets three arguments which are monitored by it. The first one is ab
 
 ## Snapshot
 ### Server
-![Server](/screenshots/server)
+![Server](/screenshots/server.png)
 ### Client1
-![Client1](/screenshots/client1)
+![Client1](/screenshots/client1.png)
 
 ### Client2
 
-![Client2](/screenshots/client2)
+![Client2](/screenshots/client2.png)
 
 ## Flow chart
-![Flow Chart](/screenshots/flowchart)
+![Flow Chart](/screenshots/flowchart.png)
 
 The flow chart of this application is very similar to TCP connection. Because it is based on TCP connection. The only difference is that the application has `select()` flow. It allows server to connect with many different clients. In addition, it allows client to handle both sys.stdin from client and data from server.
 
