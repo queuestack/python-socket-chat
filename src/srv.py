@@ -119,6 +119,26 @@ def recv_and_send_msg(sock, servSock, connList):
             sock.close()
         return
     
+def run_server(servSock, connList):
+    try:
+        # Get the lists of sockets with sockets from connected sockets
+        readableList, writableList, errorList = select.select(connList, [], [])
+
+        for sock in readableList:
+            # Connect to new client if readable socket is server socket
+            # Receive message from a client and send the message to other clients if readable socket is client socket
+            connect_client(sock, servSock, connList) if sock == servSock else recv_and_send_msg(sock, servSock, connList)
+
+    except KeyboardInterrupt:
+        # Handle Ctrl + C
+        # Close socket server before exiting the process
+        for sock in connList:
+            if sock:
+                sock.close()
+        
+        print(Texts.KEY_INTER)
+        sys.exit()    
+
 def main():
     # Get host and port number from arguments
     if len(sys.argv) < 3:
@@ -128,9 +148,6 @@ def main():
         host = sys.argv[1]
         port = int(sys.argv[2])
 
-    # List of socket
-    connList = []
-
     # Open server socket and bind it to input ip, port
     servSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     servSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -138,30 +155,16 @@ def main():
     servSock.listen(Constants.LISTEN_BACKLOG)
 
     # Add server socket to the list of socket
+    connList = []
     connList.append(servSock)
 
     # Print server start message
     print(Texts.START_SRV % port )
 
     while True:
-        try:
-            # Get the lists of sockets with sockets from connected sockets
-            readableList, writableList, errorList = select.select(connList, [], [])
-
-            for sock in readableList:
-                # Connect to new client if readable socket is server socket
-                # Receive message from a client and send the message to other clients if readable socket is client socket
-                connect_client(sock, servSock, connList) if sock == servSock else recv_and_send_msg(sock, servSock, connList)
-
-        except KeyboardInterrupt:
-            # Handle Ctrl + C
-            # Close socket server before exiting the process
-            for sock in connList:
-                if sock:
-                    sock.close()
-            
-            print(Texts.KEY_INTER)
-            sys.exit()
+        # Connect to new clients
+        # Receive message from a client and send it to the other clients
+        run_server(servSock, connList)
     
     if servSock:
         servSock.close()
