@@ -29,7 +29,7 @@ class Constants:
     NUM_SERVER = 1
     NUM_LEAVING_CLIENT = 1
 
-def send_all (sendSock, servSock, message, connList):
+def broadcast (sendSock, servSock, message, connList):
     # Send message to connected sockets except server and sender
     for sock in connList:
         if sock != sendSock and sock != servSock:
@@ -51,7 +51,7 @@ def connect_client(sock, servSock, connList):
     join_msg = make_join_msg(ip, port, connList)
 
     newConnSock.send(conn_msg.encode('utf-8'))
-    send_all(newConnSock, servSock, join_msg.encode('utf-8'), connList)
+    broadcast(newConnSock, servSock, join_msg.encode('utf-8'), connList)
     print(join_msg)
     return
 
@@ -86,7 +86,7 @@ def recv_and_send_msg(sock, servSock, connList):
             # Client exits the chat room when the data is new line
             # Send closing connection message to other clients and server
             msg = make_leave_msg(ip, port, connList)
-            send_all(sock, servSock, msg.encode('utf-8'), connList)
+            broadcast(sock, servSock, msg.encode('utf-8'), connList)
             print(msg)
 
             # Close connection
@@ -99,7 +99,7 @@ def recv_and_send_msg(sock, servSock, connList):
             # Send message to the other clients and server
             data = data.rstrip()
             msg = Texts.SEND_MSG % (ip, port, data)
-            send_all(sock, servSock, msg.encode('utf-8'), connList)
+            broadcast(sock, servSock, msg.encode('utf-8'), connList)
             print(msg)
             return
 
@@ -110,7 +110,7 @@ def recv_and_send_msg(sock, servSock, connList):
 
         # Send error message to other clients and server
         msg = make_leave_msg(ip, port, connList) + " (error) "
-        send_all(sock, servSock, msg.encode('utf-8'), connList)
+        broadcast(sock, servSock, msg.encode('utf-8'), connList)
         print(msg)
 
         # Close connection
